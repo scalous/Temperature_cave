@@ -48,6 +48,9 @@
 
 
         function plotChart(garageData, caveData) {
+        console.log("garageData received in plotChart:", garageData); // Ajout du log
+    console.log("caveData received in plotChart:", caveData); // Ajout du log
+
             const ctx = document.getElementById('temperatureChart').getContext('2d');
             
             new Chart(ctx, {
