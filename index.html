@@ -14,80 +14,76 @@
     <input type="date" id="endDate">
     <button onclick="fetchData()">Afficher</button>
     <canvas id="temperatureChart"></canvas>
-
+    
     <script>
-        let chartInstance = null;
-
         async function fetchData() {
             const startDate = document.getElementById('startDate').value;
             const endDate = document.getElementById('endDate').value;
-
+            
             if (!startDate || !endDate) {
                 alert("Veuillez sélectionner une période.");
                 return;
             }
-
-            let garageData = await fetchAPI('https://api.thingspeak.com/channels/2851323/fields/1.json?api_key=SPJ6Y2W1B009JQTG&results=100');
-            let caveData = await fetchAPI('https://api.thingspeak.com/channels/2865124/fields/1.json?api_key=0UCS0BOBZ6SXGARL&results=100');
-
-            // Transformation des données
-            garageData = garageData.map(d => ({
-                date: d.created_at.split('T')[0],  // Garde seulement la date
-                temperature: parseFloat(d.field1)
-            }));
-
-            caveData = caveData.map(d => ({
-                date: d.created_at.split('T')[0],
-                temperature: parseFloat(d.field1)
-            }));
-
-            // Filtrage des données par période
-            garageData = filterDataByDate(garageData, startDate, endDate);
-            caveData = filterDataByDate(caveData, startDate, endDate);
-
+            
+            const garageData = await fetchAPI('https://api.thingspeak.com/channels/2851323/fields/1.json?api_key=SPJ6Y2W1B009JQTG&results=1000');
+            const caveData = await fetchAPI('https://api.thingspeak.com/channels/2865124/fields/1.json?api_key=0UCS0BOBZ6SXGARL&results=1000');
+            
             plotChart(garageData, caveData);
         }
 
         async function fetchAPI(url) {
             try {
+                console.log("Fetching data from:", url); 
                 const response = await fetch(url);
                 const data = await response.json();
-                return data.feeds || [];
+                console.log("Data received:", data);
+
+                return data.feeds || []; 
             } catch (error) {
                 console.error("Erreur lors de la récupération des données", error);
                 return [];
             }
         }
 
-        function filterDataByDate(data, startDate, endDate) {
-            return data.filter(d => {
-                const date = new Date(d.date);
-                return date >= new Date(startDate) && date <= new Date(endDate);
-            });
-        }
-
         function plotChart(garageData, caveData) {
+            console.log("garageData received in plotChart:", garageData);
+            console.log("caveData received in plotChart:", caveData);
+            
+            // Filtrer et formater les données
+            const formattedGarageData = garageData.map(d => ({
+                date: new Date(d.created_at).toLocaleString("fr-FR"),
+                temperature: parseFloat(d.field1)
+            })).filter(d => !isNaN(d.temperature));
+
+            const formattedCaveData = caveData.map(d => ({
+                date: new Date(d.created_at).toLocaleString("fr-FR"),
+                temperature: parseFloat(d.field1)
+            })).filter(d => !isNaN(d.temperature));
+
+            console.log("garageData formaté:", formattedGarageData);
+            console.log("caveData formaté:", formattedCaveData);
+
             const ctx = document.getElementById('temperatureChart').getContext('2d');
-
-            if (chartInstance) {
-                chartInstance.destroy(); // Supprime le graphique existant pour éviter les doublons
-            }
-
-            chartInstance = new Chart(ctx, {
+            
+            new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: garageData.map(d => d.date),
+                    labels: formattedGarageData.map(d => d.date),
                     datasets: [
                         {
                             label: 'Garage',
-                            data: garageData.map(d => d.temperature),
+                            data: formattedGarageData.map(d => d.temperature),
                             borderColor: 'red',
+                            borderWidth: 2,
+                            pointRadius: 3,
                             fill: false
                         },
                         {
                             label: 'Cave',
-                            data: caveData.map(d => d.temperature),
+                            data: formattedCaveData.map(d => d.temperature),
                             borderColor: 'blue',
+                            borderWidth: 2,
+                            pointRadius: 3,
                             fill: false
                         }
                     ]
@@ -95,8 +91,18 @@
                 options: {
                     responsive: true,
                     scales: {
-                        x: { title: { display: true, text: 'Date' } },
-                        y: { title: { display: true, text: 'Température (°C)' } }
+                        x: {
+                            title: { display: true, text: 'Date' },
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 45,
+                                autoSkip: true,
+                                maxTicksLimit: 10
+                            }
+                        },
+                        y: {
+                            title: { display: true, text: 'Température (°C)' }
+                        }
                     }
                 }
             });
