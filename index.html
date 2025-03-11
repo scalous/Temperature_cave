@@ -19,26 +19,45 @@
     <script>
         let tempChart;
 
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toISOString().slice(0, 19).replace("T", " ");
+        }
+
         async function fetchData() {
             const startDate = document.getElementById('start-date').value;
             const endDate = document.getElementById('end-date').value;
             
-            const garageUrl = `https://api.thingspeak.com/channels/2851323/fields/1.json?api_key=VOTRE_CLE&start=${startDate}&end=${endDate}`;
-            const caveUrl = `https://api.thingspeak.com/channels/2865124/fields/1.json?api_key=VOTRE_CLE&start=${startDate}&end=${endDate}`;
+            const formattedStartDate = formatDate(startDate);
+            const formattedEndDate = formatDate(endDate);
             
-            const garageResponse = await fetch(garageUrl);
-            const caveResponse = await fetch(caveUrl);
+            const apiKey = "SPJ6Y2W1B009JQTG"; // Remplace par ta vraie clé
             
-            const garageData = await garageResponse.json();
-            const caveData = await caveResponse.json();
+            const garageUrl = `https://api.thingspeak.com/channels/2851323/fields/1.json?api_key=${apiKey}&start=${formattedStartDate}&end=${formattedEndDate}`;
+            const caveUrl = `https://api.thingspeak.com/channels/2865124/fields/1.json?api_key=${apiKey}&start=${formattedStartDate}&end=${formattedEndDate}`;
             
-            const formattedGarageData = formatData(garageData.feeds);
-            const formattedCaveData = formatData(caveData.feeds);
-            
-            plotChart(formattedGarageData, formattedCaveData);
+            try {
+                const garageResponse = await fetch(garageUrl);
+                const caveResponse = await fetch(caveUrl);
+                
+                if (!garageResponse.ok || !caveResponse.ok) {
+                    throw new Error("Erreur lors de la récupération des données");
+                }
+                
+                const garageData = await garageResponse.json();
+                const caveData = await caveResponse.json();
+                
+                const formattedGarageData = formatData(garageData.feeds);
+                const formattedCaveData = formatData(caveData.feeds);
+                
+                plotChart(formattedGarageData, formattedCaveData);
+            } catch (error) {
+                console.error("Erreur API:", error);
+            }
         }
 
         function formatData(feeds) {
+            if (!feeds) return [];
             return feeds.map(feed => ({
                 x: new Date(feed.created_at),
                 y: parseFloat(feed.field1)
