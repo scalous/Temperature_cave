@@ -25,39 +25,50 @@
                 return;
             }
             
-            const garageData = await fetchAPI('https://api.thingspeak.com/channels/2851323/fields/1.json?api_key=SPJ6Y2W1B009JQTG&results=2');
-            const caveData = await fetchAPI('https://api.thingspeak.com/channels/2865124/fields/1.json?api_key=0UCS0BOBZ6SXGARL&results=2');
+            const garageData = await fetchAPI('https://api.thingspeak.com/channels/2851323/fields/1.json?api_key=SPJ6Y2W1B009JQTG&results=10');
+            const caveData = await fetchAPI('https://api.thingspeak.com/channels/2865124/fields/1.json?api_key=0UCS0BOBZ6SXGARL&results=10');
             
             plotChart(garageData, caveData);
         }
 
-       async function fetchAPI(url) {
-    try {
-        console.log("Fetching data from:", url); 
-        const response = await fetch(url);
-        const data = await response.json();
-        console.log("Data received:", data); 
+        async function fetchAPI(url) {
+            try {
+                console.log("Fetching data from:", url); 
+                const response = await fetch(url);
+                const data = await response.json();
+                console.log("Data received:", data); 
 
-        // Récupérer uniquement le tableau "feeds"
-        return data.feeds || [];  // Si "feeds" n'existe pas, retourne un tableau vide
-    } catch (error) {
-        console.error("Erreur lors de la récupération des données", error);
-        return [];
-    }
-}
+                return data.feeds || [];  // Retourner "feeds" ou un tableau vide
+            } catch (error) {
+                console.error("Erreur lors de la récupération des données", error);
+                return [];
+            }
+        }
 
+        function plotChart(garageData, caveData) {
+            console.log("garageData received in plotChart:", garageData);
+            console.log("caveData received in plotChart:", caveData);
 
-        function plotChart(garageData.feeds, caveData.feeds);
- {
-        console.log("garageData received in plotChart:", garageData); // Ajout du log
-    console.log("caveData received in plotChart:", caveData); // Ajout du log
+            // Transformation des données
+            garageData = garageData.map(d => ({
+                date: new Date(d.created_at).toLocaleString(),
+                temperature: parseFloat(d.field1)
+            }));
+
+            caveData = caveData.map(d => ({
+                date: new Date(d.created_at).toLocaleString(),
+                temperature: parseFloat(d.field1)
+            }));
+
+            console.log("garageData formaté:", garageData);
+            console.log("caveData formaté:", caveData);
 
             const ctx = document.getElementById('temperatureChart').getContext('2d');
             
             new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: garageData.map(d => d.date),
+                    labels: garageData.length > 0 ? garageData.map(d => d.date) : caveData.map(d => d.date),
                     datasets: [
                         {
                             label: 'Garage',
