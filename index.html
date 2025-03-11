@@ -25,8 +25,8 @@
                 return;
             }
             
-            const garageData = await fetchAPI('https://api.thingspeak.com/channels/2851323/feeds.json?api_key=SPJ6Y2W1B009JQTG&results=2');
-            const caveData = await fetchAPI('https://api.thingspeak.com/channels/2865124/feeds.json?api_key=0UCS0BOBZ6SXGARL&results=2');
+            const garageData = await fetchAPI('https://api.thingspeak.com/channels/2851323/fields/1.json?api_key=SPJ6Y2W1B009JQTG&results=2');
+            const caveData = await fetchAPI('https://api.thingspeak.com/channels/2865124/fields/1.json?api_key=0UCS0BOBZ6SXGARL&results=2');
             
             plotChart(garageData, caveData);
         }
