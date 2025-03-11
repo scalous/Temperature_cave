@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comparaison Température</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h2>Évolution de la Température</h2>
+    <label for="startDate">Date de début :</label>
+    <input type="date" id="startDate">
+    <label for="endDate">Date de fin :</label>
+    <input type="date" id="endDate">
+    <button onclick="fetchData()">Afficher</button>
+    <canvas id="temperatureChart"></canvas>
+    
+    <script>
+        async function fetchData() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            if (!startDate || !endDate) {
+                alert("Veuillez sélectionner une période.");
+                return;
+            }
+            
+            const garageData = await fetchAPI('https://api.thingspeak.com/channels/2851323/feeds.json?api_key=SPJ6Y2W1B009JQTG&results=2');
+            const caveData = await fetchAPI('https://api.thingspeak.com/channels/2865124/feeds.json?api_key=0UCS0BOBZ6SXGARL&results=2');
+            
+            plotChart(garageData, caveData);
+        }
+
+        async function fetchAPI(url) {
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error("Erreur lors de la récupération des données", error);
+                return [];
+            }
+        }
+
+        function plotChart(garageData, caveData) {
+            const ctx = document.getElementById('temperatureChart').getContext('2d');
+            
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: garageData.map(d => d.date),
+                    datasets: [
+                        {
+                            label: 'Garage',
+                            data: garageData.map(d => d.temperature),
+                            borderColor: 'red',
+                            fill: false
+                        },
+                        {
+                            label: 'Cave',
+                            data: caveData.map(d => d.temperature),
+                            borderColor: 'blue',
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: { title: { display: true, text: 'Date' } },
+                        y: { title: { display: true, text: 'Température (°C)' } }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
