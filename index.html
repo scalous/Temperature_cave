@@ -3,105 +3,142 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Comparaison Température</title>
+    <title>Évolution de la Température</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
 </head>
 <body>
     <h2>Évolution de la Température</h2>
-    <label for="startDate">Date de début :</label>
-    <input type="date" id="startDate">
-    <label for="endDate">Date de fin :</label>
-    <input type="date" id="endDate">
+    <label for="start-date">Date de début :</label>
+    <input type="date" id="start-date">
+    <label for="end-date">Date de fin :</label>
+    <input type="date" id="end-date">
     <button onclick="fetchData()">Afficher</button>
-    <canvas id="temperatureChart"></canvas>
-    
+    <canvas id="tempChart"></canvas>
+
     <script>
+        let tempChart;
+
         async function fetchData() {
-            const startDate = document.getElementById('startDate').value;
-            const endDate = document.getElementById('endDate').value;
+            const startDate = document.getElementById('start-date').value;
+            const endDate = document.getElementById('end-date').value;
             
-            if (!startDate || !endDate) {
-                alert("Veuillez sélectionner une période.");
-                return;
-            }
+            const garageUrl = `https://api.thingspeak.com/channels/2851323/fields/1.json?api_key=VOTRE_CLE&start=${startDate}&end=${endDate}`;
+            const caveUrl = `https://api.thingspeak.com/channels/2865124/fields/1.json?api_key=VOTRE_CLE&start=${startDate}&end=${endDate}`;
             
-            const garageData = await fetchAPI('https://api.thingspeak.com/channels/2851323/fields/1.json?api_key=SPJ6Y2W1B009JQTG&results=1000');
-            const caveData = await fetchAPI('https://api.thingspeak.com/channels/2865124/fields/1.json?api_key=0UCS0BOBZ6SXGARL&results=1000');
+            const garageResponse = await fetch(garageUrl);
+            const caveResponse = await fetch(caveUrl);
             
-            plotChart(garageData, caveData);
+            const garageData = await garageResponse.json();
+            const caveData = await caveResponse.json();
+            
+            const formattedGarageData = formatData(garageData.feeds);
+            const formattedCaveData = formatData(caveData.feeds);
+            
+            plotChart(formattedGarageData, formattedCaveData);
         }
 
-        async function fetchAPI(url) {
-            try {
-                console.log("Fetching data from:", url); 
-                const response = await fetch(url);
-                const data = await response.json();
-                console.log("Data received:", data);
+        function formatData(feeds) {
+            return feeds.map(feed => ({
+                x: new Date(feed.created_at),
+                y: parseFloat(feed.field1)
+            })).filter(data => !isNaN(data.y));
+        }
 
-                return data.feeds || []; 
-            } catch (error) {
-                console.error("Erreur lors de la récupération des données", error);
-                return [];
+        function movingAverage(data, windowSize) {
+            let result = [];
+            for (let i = 0; i < data.length; i++) {
+                let start = Math.max(0, i - windowSize + 1);
+                let subset = data.slice(start, i + 1);
+                let avg = subset.reduce((sum, point) => sum + point.y, 0) / subset.length;
+                result.push({ x: data[i].x, y: avg });
             }
+            return result;
         }
 
         function plotChart(garageData, caveData) {
-            console.log("garageData received in plotChart:", garageData);
-            console.log("caveData received in plotChart:", caveData);
+            const ctx = document.getElementById('tempChart').getContext('2d');
+            if (tempChart) tempChart.destroy();
             
-            // Filtrer et formater les données
-            const formattedGarageData = garageData.map(d => ({
-                date: new Date(d.created_at).toLocaleString("fr-FR"),
-                temperature: parseFloat(d.field1)
-            })).filter(d => !isNaN(d.temperature));
-
-            const formattedCaveData = caveData.map(d => ({
-                date: new Date(d.created_at).toLocaleString("fr-FR"),
-                temperature: parseFloat(d.field1)
-            })).filter(d => !isNaN(d.temperature));
-
-            console.log("garageData formaté:", formattedGarageData);
-            console.log("caveData formaté:", formattedCaveData);
-
-            const ctx = document.getElementById('temperatureChart').getContext('2d');
-            
-            new Chart(ctx, {
+            tempChart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: formattedGarageData.map(d => d.date),
                     datasets: [
                         {
                             label: 'Garage',
-                            data: formattedGarageData.map(d => d.temperature),
+                            data: garageData,
                             borderColor: 'red',
-                            borderWidth: 2,
-                            pointRadius: 3,
+                            backgroundColor: 'rgba(255, 0, 0, 0.1)',
+                            borderWidth: 1,
+                            pointRadius: 2,
+                            pointHoverRadius: 4,
                             fill: false
                         },
                         {
                             label: 'Cave',
-                            data: formattedCaveData.map(d => d.temperature),
+                            data: caveData,
                             borderColor: 'blue',
+                            backgroundColor: 'rgba(0, 0, 255, 0.1)',
+                            borderWidth: 1,
+                            pointRadius: 2,
+                            pointHoverRadius: 4,
+                            fill: false
+                        },
+                        {
+                            label: 'Garage (Moyenne mobile)',
+                            data: movingAverage(garageData, 5),
+                            borderColor: 'darkred',
                             borderWidth: 2,
-                            pointRadius: 3,
+                            borderDash: [5, 5],
+                            fill: false
+                        },
+                        {
+                            label: 'Cave (Moyenne mobile)',
+                            data: movingAverage(caveData, 5),
+                            borderColor: 'darkblue',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
                             fill: false
                         }
                     ]
                 },
                 options: {
                     responsive: true,
+                    maintainAspectRatio: false,
                     scales: {
                         x: {
-                            title: { display: true, text: 'Date' },
+                            type: 'time',
+                            time: {
+                                unit: 'hour',
+                                tooltipFormat: 'YYYY-MM-DD HH:mm'
+                            },
                             ticks: {
                                 maxRotation: 45,
-                                minRotation: 45,
-                                autoSkip: true,
-                                maxTicksLimit: 10
+                                minRotation: 45
                             }
                         },
                         y: {
-                            title: { display: true, text: 'Température (°C)' }
+                            title: {
+                                display: true,
+                                text: 'Température (°C)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        zoom: {
+                            pan: {
+                                enabled: true,
+                                mode: 'x'
+                            },
+                            zoom: {
+                                wheel: {
+                                    enabled: true
+                                },
+                                pinch: {
+                                    enabled: true
+                                },
+                                mode: 'x'
+                            }
                         }
                     }
                 }
