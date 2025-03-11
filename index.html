@@ -14,61 +14,69 @@
     <input type="date" id="endDate">
     <button onclick="fetchData()">Afficher</button>
     <canvas id="temperatureChart"></canvas>
-    
+
     <script>
+        let chartInstance = null;
+
         async function fetchData() {
             const startDate = document.getElementById('startDate').value;
             const endDate = document.getElementById('endDate').value;
-            
+
             if (!startDate || !endDate) {
                 alert("Veuillez sélectionner une période.");
                 return;
             }
-            
-            const garageData = await fetchAPI('https://api.thingspeak.com/channels/2851323/fields/1.json?api_key=SPJ6Y2W1B009JQTG&results=10');
-            const caveData = await fetchAPI('https://api.thingspeak.com/channels/2865124/fields/1.json?api_key=0UCS0BOBZ6SXGARL&results=10');
-            
+
+            let garageData = await fetchAPI('https://api.thingspeak.com/channels/2851323/fields/1.json?api_key=SPJ6Y2W1B009JQTG&results=100');
+            let caveData = await fetchAPI('https://api.thingspeak.com/channels/2865124/fields/1.json?api_key=0UCS0BOBZ6SXGARL&results=100');
+
+            // Transformation des données
+            garageData = garageData.map(d => ({
+                date: d.created_at.split('T')[0],  // Garde seulement la date
+                temperature: parseFloat(d.field1)
+            }));
+
+            caveData = caveData.map(d => ({
+                date: d.created_at.split('T')[0],
+                temperature: parseFloat(d.field1)
+            }));
+
+            // Filtrage des données par période
+            garageData = filterDataByDate(garageData, startDate, endDate);
+            caveData = filterDataByDate(caveData, startDate, endDate);
+
             plotChart(garageData, caveData);
         }
 
         async function fetchAPI(url) {
             try {
-                console.log("Fetching data from:", url); 
                 const response = await fetch(url);
                 const data = await response.json();
-                console.log("Data received:", data); 
-
-                return data.feeds || [];  // Retourner "feeds" ou un tableau vide
+                return data.feeds || [];
             } catch (error) {
                 console.error("Erreur lors de la récupération des données", error);
                 return [];
             }
         }
 
+        function filterDataByDate(data, startDate, endDate) {
+            return data.filter(d => {
+                const date = new Date(d.date);
+                return date >= new Date(startDate) && date <= new Date(endDate);
+            });
+        }
+
         function plotChart(garageData, caveData) {
-            console.log("garageData received in plotChart:", garageData);
-            console.log("caveData received in plotChart:", caveData);
-
-            // Transformation des données
-            garageData = garageData.map(d => ({
-                date: new Date(d.created_at).toLocaleString(),
-                temperature: parseFloat(d.field1)
-            }));
-
-            caveData = caveData.map(d => ({
-                date: new Date(d.created_at).toLocaleString(),
-                temperature: parseFloat(d.field1)
-            }));
-
-            console.log("garageData formaté:", garageData);
-            console.log("caveData formaté:", caveData);
-
             const ctx = document.getElementById('temperatureChart').getContext('2d');
-            
-            new Chart(ctx, {
+
+            if (chartInstance) {
+                chartInstance.destroy(); // Supprime le graphique existant pour éviter les doublons
+            }
+
+            chartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: garageData.length > 0 ? garageData.map(d => d.date) : caveData.map(d => d.date),
+                    labels: garageData.map(d => d.date),
                     datasets: [
                         {
                             label: 'Garage',
