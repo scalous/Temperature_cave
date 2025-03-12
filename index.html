@@ -21,59 +21,54 @@
 
         function formatDate(dateStr) {
             const date = new Date(dateStr);
-            return date.toISOString().slice(0, 19).replace("T", " ");
+            return date.toISOString().slice(0, 19).replace("T", " ") + " UTC";
         }
 
-     async function fetchData() {
-    const startDate = document.getElementById('start-date').value;
-    const endDate = document.getElementById('end-date').value;
+        async function fetchData() {
+            try {
+                const startDate = document.getElementById('start-date').value;
+                const endDate = document.getElementById('end-date').value;
 
-    if (!startDate || !endDate) {
-        console.error("Veuillez sélectionner des dates valides.");
-        return;
-    }
+                if (!startDate || !endDate) {
+                    console.error("Veuillez sélectionner des dates valides.");
+                    return;
+                }
 
-    const formattedStartDate = formatDate(startDate);
-    const formattedEndDate = formatDate(endDate);
-
-const apiKeyGarage = "SPJ6Y2W1B009JQTG"; 
-const apiKeyCave = "0UCS0BOBZ6SXGARL";
-
-const garageUrl = `https://api.thingspeak.com/channels/2851323/fields/1.json?api_key=${apiKeyGarage}&start=${formattedStartDate}&end=${formattedEndDate}`;
-const caveUrl = `https://api.thingspeak.com/channels/2865124/fields/1.json?api_key=${apiKeyCave}&start=${formattedStartDate}&end=${formattedEndDate}`;
+                const apiKeyGarage = "SPJ6Y2W1B009JQTG"; 
+                const apiKeyCave = "0UCS0BOBZ6SXGARL";
 
 
-    console.log("Garage URL:", garageUrl);
-    console.log("Cave URL:", caveUrl);
+             const garageUrl = `https://api.thingspeak.com/channels/2851323/fields/1.json?api_key=${apiKeyGarage}&start=${formattedStartDate}&end=${formattedEndDate}`;
+             const caveUrl = `https://api.thingspeak.com/channels/2865124/fields/1.json?api_key=${apiKeyCave}&start=${formattedStartDate}&end=${formattedEndDate}`;
 
-    let garageData = [], caveData = [];
 
-    try {
-        const garageResponse = await fetch(garageUrl);
-        if (garageResponse.ok) {
-            const json = await garageResponse.json();
-            garageData = json.feeds ? formatData(json.feeds) : [];
-        } else {
-            console.error("Erreur Garage:", await garageResponse.text());
-        }
-    } catch (error) {
-        console.error("Erreur API Garage:", error);
-    }
+                console.log("Garage URL:", garageUrl);
+                console.log("Cave URL:", caveUrl);
 
-    try {
-        const caveResponse = await fetch(caveUrl);
-        if (caveResponse.ok) {
-            const json = await caveResponse.json();
-            caveData = json.feeds ? formatData(json.feeds) : [];
-        } else {
-            console.error("Erreur Cave:", await caveResponse.text());
-        }
-    } catch (error) {
-        console.error("Erreur API Cave:", error);
-    }
+                const [garageResponse, caveResponse] = await Promise.all([
+                    fetch(garageUrl),
+                    fetch(caveUrl)
+                ]);
 
-    plotChart(garageData, caveData);
-} catch (error) {
+                if (!garageResponse.ok) {
+                    throw new Error(`Garage API Error: ${garageResponse.statusText}`);
+                }
+                if (!caveResponse.ok) {
+                    throw new Error(`Cave API Error: ${caveResponse.statusText}`);
+                }
+
+                const garageData = await garageResponse.json();
+                const caveData = await caveResponse.json();
+
+                if (!garageData.feeds || !caveData.feeds) {
+                    throw new Error("Les données sont absentes ou mal formatées.");
+                }
+
+                const formattedGarageData = formatData(garageData.feeds);
+                const formattedCaveData = formatData(caveData.feeds);
+
+                plotChart(formattedGarageData, formattedCaveData);
+            } catch (error) {
                 console.error("Erreur API:", error);
             }
         }
@@ -99,7 +94,7 @@ const caveUrl = `https://api.thingspeak.com/channels/2865124/fields/1.json?api_k
         function plotChart(garageData, caveData) {
             const ctx = document.getElementById('tempChart').getContext('2d');
             if (tempChart) tempChart.destroy();
-            
+
             tempChart = new Chart(ctx, {
                 type: 'line',
                 data: {
