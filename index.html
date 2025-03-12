@@ -16,11 +16,18 @@
         }
         #chartContainer {
             width: 100%;
-            height: 80%; /* Ajuste la hauteur pour laisser de la place aux boutons */
+            height: 80%;
+            position: relative;
         }
         #tempChart {
             width: 100%;
             height: 100%;
+        }
+        #scaleControls {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
         }
     </style>
 </head>
@@ -32,14 +39,14 @@
     <input type="date" id="end-date">
     <button onclick="fetchData()">Afficher</button>
 
-    <div>
-        <button onclick="changeXScale('hour')">Échelle X (Heure)</button>
-        <button onclick="changeXScale('day')">Échelle X (Jour)</button>
-        <button onclick="changeYScale(10)">Échelle Y (+10)</button>
-        <button onclick="changeYScale(-10)">Échelle Y (-10)</button>
-    </div>
-
     <div id="chartContainer">
+        <div id="scaleControls">
+            <button onclick="changeXScale('hour')">Échelle X (Heure)</button>
+            <button onclick="changeXScale('day')">Échelle X (Jour)</button>
+            <button onclick="changeYScale(10)">Échelle Y (+10)</button>
+            <button onclick="changeYScale(-10)">Échelle Y (-10)</button>
+            <button onclick="autoScaleY()">Auto-échelle Y</button>
+        </div>
         <canvas id="tempChart"></canvas>
     </div>
 
@@ -63,8 +70,8 @@
                     return;
                 }
 
-                const apiKeyGarage = "SPJ6Y2W1B009JQTG"; // Remplace par ta vraie clé
-                const apiKeyCave = "0UCS0BOBZ6SXGARL"; // Remplace par ta vraie clé
+                const apiKeyGarage = "SPJ6Y2W1B009JQTG";
+                const apiKeyCave = "0UCS0BOBZ6SXGARL";
 
                 const formattedStartDate = formatDate(startDate);
                 const formattedEndDate = formatDate(endDate);
@@ -225,8 +232,3 @@
                 }
             });
         }
-
-        function changeXScale(unit) {
-            if (tempChart) {
-                tempChart.options.scales.x.time.unit = unit;
-                tempChart.update();
