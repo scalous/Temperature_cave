@@ -99,9 +99,15 @@
 
         function plotChart(garageData, caveData) {
             const ctx = document.getElementById('tempChart').getContext('2d');
-            if (tempChart) { // Vérifie si tempChart est initialisé
+            if (tempChart) {
                 tempChart.destroy();
             }
+
+            // Calcul des plages de températures
+            const allData = garageData.concat(caveData);
+            const temperatures = allData.map(data => data.y);
+            const minTemp = Math.min(...temperatures);
+            const maxTemp = Math.max(...temperatures);
 
             tempChart = new Chart(ctx, {
                 type: 'line',
@@ -161,6 +167,8 @@
                             }
                         },
                         y: {
+                            min: minTemp - 2, // Ajoute un peu de marge
+                            max: maxTemp + 2,
                             title: {
                                 display: true,
                                 text: 'Température (°C)'
