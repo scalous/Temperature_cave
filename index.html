@@ -28,8 +28,13 @@
             const startDate = document.getElementById('start-date').value;
             const endDate = document.getElementById('end-date').value;
             
-            const formattedStartDate = formatDate(startDate);
-            const formattedEndDate = formatDate(endDate);
+            if (!startDate || !endDate) {
+                console.error("Veuillez sélectionner des dates valides.");
+                return;
+            }
+            
+            const formattedStartDate = formatDate(startDate) + " UTC";
+            const formattedEndDate = formatDate(endDate) + " UTC";
             
             const apiKey = "0UCS0BOBZ6SXGARL"; // Remplace par ta vraie clé
             
@@ -47,6 +52,13 @@
                 const garageData = await garageResponse.json();
                 const caveData = await caveResponse.json();
                 
+                console.log("Réponse garage:", garageData);
+                console.log("Réponse cave:", caveData);
+                
+                if (!garageData.feeds || !caveData.feeds) {
+                    throw new Error("Les données sont absentes ou mal formatées");
+                }
+                
                 const formattedGarageData = formatData(garageData.feeds);
                 const formattedCaveData = formatData(caveData.feeds);
                 
@@ -57,7 +69,6 @@
         }
 
         function formatData(feeds) {
-            if (!feeds) return [];
             return feeds.map(feed => ({
                 x: new Date(feed.created_at),
                 y: parseFloat(feed.field1)
