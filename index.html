@@ -33,8 +33,9 @@
             
             const apiKey = "0UCS0BOBZ6SXGARL"; // Remplace par ta vraie clé
             
-            const garageUrl = `https://api.thingspeak.com/channels/2851323/fields/1.json?api_key=${apiKey}&start=${formattedStartDate}&end=${formattedEndDate}`;
-            const caveUrl = `https://api.thingspeak.com/channels/2865124/fields/1.json?api_key=${apiKey}&start=${formattedStartDate}&end=${formattedEndDate}`;
+            const garageUrl = `https://api.thingspeak.com/channels/2851323/fields/1.json?api_key=TA_CLE_ICI&start=${startDate}&end=${endDate}`;
+            const caveUrl = `https://api.thingspeak.com/channels/2865124/fields/1.json?api_key=TA_CLE_ICI&start=${startDate}&end=${endDate}`;
+
             
             try {
                 const garageResponse = await fetch(garageUrl);
