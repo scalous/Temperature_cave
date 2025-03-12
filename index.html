@@ -23,12 +23,6 @@
             width: 100%;
             height: 100%;
         }
-        #scaleControls {
-            position: absolute;
-            top: 0;
-            left: 50%;
-            transform: translateX(-50%);
-        }
     </style>
 </head>
 <body>
@@ -40,13 +34,6 @@
     <button onclick="fetchData()">Afficher</button>
 
     <div id="chartContainer">
-        <div id="scaleControls">
-            <button onclick="changeXScale('hour')">Échelle X (Heure)</button>
-            <button onclick="changeXScale('day')">Échelle X (Jour)</button>
-            <button onclick="changeYScale(10)">Échelle Y (+10)</button>
-            <button onclick="changeYScale(-10)">Échelle Y (-10)</button>
-            <button onclick="autoScaleY()">Auto-échelle Y</button>
-        </div>
         <canvas id="tempChart"></canvas>
     </div>
 
@@ -118,14 +105,14 @@
         }
 
         function formatData(feeds) {
-            console.log("Feeds before formatData:", feeds); // Ajout pour le débogage
+            console.log("Feeds before formatData:", feeds);
 
             const formattedData = feeds.map(feed => ({
                 x: new Date(feed.created_at),
                 y: parseFloat(feed.field1)
             })).filter(data => !isNaN(data.y));
 
-            console.log("Formatted Data after formatData:", formattedData); // Ajout pour le débogage
+            console.log("Formatted Data after formatData:", formattedData);
 
             return formattedData;
         }
@@ -219,3 +206,31 @@
                             min: yScaleMin,
                             max: yScaleMax,
                             title: {
+                                display: true,
+                                text: 'Température (°C)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        zoom: {
+                            pan: {
+                                enabled: true,
+                                mode: 'x'
+                            },
+                            zoom: {
+                                wheel: {
+                                    enabled: true
+                                },
+                                pinch: {
+                                    enabled: true
+                                },
+                                mode: 'x'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
