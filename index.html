@@ -23,6 +23,12 @@
             width: 100%;
             height: 100%;
         }
+        #scaleControls {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+        }
     </style>
 </head>
 <body>
@@ -32,6 +38,7 @@
     <label for="end-date">Date de fin :</label>
     <input type="date" id="end-date">
     <button onclick="fetchData()">Afficher</button>
+    <button onclick="autoScaleY()">Auto-échelle Y</button>
 
     <div id="chartContainer">
         <canvas id="tempChart"></canvas>
@@ -65,8 +72,8 @@
                 console.log("Formatted Start Date:", formattedStartDate);
                 console.log("Formatted End Date:", formattedEndDate);
 
-                const garageUrl = `https://api.thingspeak.com/channels/2851323/fields/1.json?api_key=${apiKeyGarage}&start=${formattedStartDate}&end=${formattedEndDate}`;
-                const caveUrl = `https://api.thingspeak.com/channels/2865124/fields/1.json?api_key=${apiKeyCave}&start=${formattedStartDate}&end=${formattedEndDate}`;
+                const garageUrl = `https://api.thingspeak.com/channels/2851323/fields/1.json?api_key=<span class="math-inline">\{apiKeyGarage\}&start\=</span>{formattedStartDate}&end=${formattedEndDate}`;
+                const caveUrl = `https://api.thingspeak.com/channels/2865124/fields/1.json?api_key=<span class="math-inline">\{apiKeyCave\}&start\=</span>{formattedStartDate}&end=${formattedEndDate}`;
 
                 console.log("Garage URL:", garageUrl);
                 console.log("Cave URL:", caveUrl);
@@ -195,7 +202,10 @@
                             type: 'time',
                             time: {
                                 unit: 'hour',
-                                tooltipFormat: 'YYYY-MM-DD HH:mm'
+                                tooltipFormat: 'YYYY-MM-DD HH:mm',
+                                displayFormats: {
+                                    hour: 'DD MMM HH:mm'
+                                }
                             },
                             ticks: {
                                 maxRotation: 45,
@@ -212,25 +222,3 @@
                         }
                     },
                     plugins: {
-                        zoom: {
-                            pan: {
-                                enabled: true,
-                                mode: 'x'
-                            },
-                            zoom: {
-                                wheel: {
-                                    enabled: true
-                                },
-                                pinch: {
-                                    enabled: true
-                                },
-                                mode: 'x'
-                            }
-                        }
-                    }
-                }
-            });
-        }
-    </script>
-</body>
-</html>
