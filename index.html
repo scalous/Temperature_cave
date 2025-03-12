@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width-device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Évolution de la Température</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
@@ -13,10 +13,11 @@
             padding: 0;
             height: 100%;
             width: 100%;
+            font-family: Arial, sans-serif;
         }
         #chartContainer {
             width: 100%;
-            height: 80%;
+            height: 80vh;
             position: relative;
         }
         #tempChart {
@@ -24,10 +25,7 @@
             height: 100%;
         }
         #scaleControls {
-            position: absolute;
-            top: 0;
-            left: 50%;
-            transform: translateX(-50%);
+            margin-top: 10px;
         }
     </style>
 </head>
@@ -69,11 +67,9 @@
 
                 const formattedStartDate = formatDate(startDate);
                 const formattedEndDate = formatDate(endDate);
-                console.log("Formatted Start Date:", formattedStartDate);
-                console.log("Formatted End Date:", formattedEndDate);
 
-                const garageUrl = `https://api.thingspeak.com/channels/2851323/fields/1.json?api_key=<span class="math-inline">\{apiKeyGarage\}&start\=</span>{formattedStartDate}&end=${formattedEndDate}`;
-                const caveUrl = `https://api.thingspeak.com/channels/2865124/fields/1.json?api_key=<span class="math-inline">\{apiKeyCave\}&start\=</span>{formattedStartDate}&end=${formattedEndDate}`;
+                const garageUrl = `https://api.thingspeak.com/channels/2851323/fields/1.json?api_key=${apiKeyGarage}&start=${formattedStartDate}&end=${formattedEndDate}`;
+                const caveUrl = `https://api.thingspeak.com/channels/2865124/fields/1.json?api_key=${apiKeyCave}&start=${formattedStartDate}&end=${formattedEndDate}`;
 
                 console.log("Garage URL:", garageUrl);
                 console.log("Cave URL:", caveUrl);
@@ -84,19 +80,14 @@
                 ]);
 
                 if (!garageResponse.ok) {
-                    const errorData = await garageResponse.text();
-                    throw new Error(`Garage API Error: ${garageResponse.statusText}, Response: ${errorData}`);
+                    throw new Error(`Garage API Error: ${garageResponse.statusText}`);
                 }
                 if (!caveResponse.ok) {
-                    const errorData = await caveResponse.text();
-                    throw new Error(`Cave API Error: ${caveResponse.statusText}, Response: ${errorData}`);
+                    throw new Error(`Cave API Error: ${caveResponse.statusText}`);
                 }
 
                 const garageData = await garageResponse.json();
                 const caveData = await caveResponse.json();
-
-                console.log("Garage Data:", garageData);
-                console.log("Cave Data:", caveData);
 
                 if (!garageData.feeds || !caveData.feeds) {
                     throw new Error("Les données sont absentes ou mal formatées.");
@@ -112,27 +103,32 @@
         }
 
         function formatData(feeds) {
-            console.log("Feeds before formatData:", feeds);
-
-            const formattedData = feeds.map(feed => ({
+            return feeds.map(feed => ({
                 x: new Date(feed.created_at),
                 y: parseFloat(feed.field1)
             })).filter(data => !isNaN(data.y));
-
-            console.log("Formatted Data after formatData:", formattedData);
-
-            return formattedData;
         }
 
         function movingAverage(data, windowSize) {
-            let result = [];
-            for (let i = 0; i < data.length; i++) {
-                let start = Math.max(0, i - windowSize + 1);
-                let subset = data.slice(start, i + 1);
-                let avg = subset.reduce((sum, point) => sum + point.y, 0) / subset.length;
-                result.push({ x: data[i].x, y: avg });
+            return data.map((_, i, arr) => {
+                const start = Math.max(0, i - windowSize + 1);
+                const subset = arr.slice(start, i + 1);
+                const avg = subset.reduce((sum, point) => sum + point.y, 0) / subset.length;
+                return { x: arr[i].x, y: avg };
+            });
+        }
+
+        function autoScaleY() {
+            if (!tempChart) return;
+            const allData = tempChart.data.datasets.flatMap(ds => ds.data);
+            const temperatures = allData.map(d => d.y);
+            if (temperatures.length > 0) {
+                yScaleMin = Math.min(...temperatures) - 2;
+                yScaleMax = Math.max(...temperatures) + 2;
+                tempChart.options.scales.y.min = yScaleMin;
+                tempChart.options.scales.y.max = yScaleMax;
+                tempChart.update();
             }
-            return result;
         }
 
         function plotChart(garageData, caveData) {
@@ -143,14 +139,8 @@
 
             const allData = garageData.concat(caveData);
             const temperatures = allData.map(data => data.y);
-            const minTemp = Math.min(...temperatures);
-            const maxTemp = Math.max(...temperatures);
-
-            if (yScaleMin === null) yScaleMin = minTemp - 2;
-            if (yScaleMax === null) yScaleMax = maxTemp + 2;
-
-            console.log("Garage Data for Chart:", garageData);
-            console.log("Cave Data for Chart:", caveData);
+            yScaleMin = Math.min(...temperatures) - 2;
+            yScaleMax = Math.max(...temperatures) + 2;
 
             tempChart = new Chart(ctx, {
                 type: 'line',
@@ -163,7 +153,6 @@
                             backgroundColor: 'rgba(255, 0, 0, 0.1)',
                             borderWidth: 1,
                             pointRadius: 2,
-                            pointHoverRadius: 4,
                             fill: false
                         },
                         {
@@ -173,7 +162,6 @@
                             backgroundColor: 'rgba(0, 0, 255, 0.1)',
                             borderWidth: 1,
                             pointRadius: 2,
-                            pointHoverRadius: 4,
                             fill: false
                         },
                         {
@@ -202,17 +190,30 @@
                             type: 'time',
                             time: {
                                 unit: 'hour',
-                                tooltipFormat: 'YYYY-MM-DD HH:mm',
+                                tooltipFormat: 'yyyy-MM-dd HH:mm',
                                 displayFormats: {
-                                    hour: 'DD MMM HH:mm'
+                                    hour: 'dd MMM HH:mm'
                                 }
-                            },
-                            ticks: {
-                                maxRotation: 45,
-                                minRotation: 45
                             }
                         },
                         y: {
                             min: yScaleMin,
                             max: yScaleMax,
-                            title
+                            title: {
+                                display: true,
+                                text: 'Température (°C)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        zoom: {
+                            pan: { enabled: true, mode: 'xy' },
+                            zoom: { enabled: true, mode: 'xy' }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
