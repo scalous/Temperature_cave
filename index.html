@@ -36,9 +36,12 @@
     const formattedStartDate = formatDate(startDate);
     const formattedEndDate = formatDate(endDate);
 
-    const apiKey = "0UCS0BOBZ6SXGARL"; 
-    const garageUrl = `https://api.thingspeak.com/channels/2851323/fields/1.json?api_key=${apiKey}&start=${formattedStartDate}&end=${formattedEndDate}`;
-    const caveUrl = `https://api.thingspeak.com/channels/2865124/fields/1.json?api_key=${apiKey}&start=${formattedStartDate}&end=${formattedEndDate}`;
+const apiKeyGarage = "SPJ6Y2W1B009JQTG"; 
+const apiKeyCave = "0UCS0BOBZ6SXGARL";
+
+const garageUrl = `https://api.thingspeak.com/channels/2851323/fields/1.json?api_key=${apiKeyGarage}&start=${formattedStartDate}&end=${formattedEndDate}`;
+const caveUrl = `https://api.thingspeak.com/channels/2865124/fields/1.json?api_key=${apiKeyCave}&start=${formattedStartDate}&end=${formattedEndDate}`;
+
 
     console.log("Garage URL:", garageUrl);
     console.log("Cave URL:", caveUrl);
