@@ -34,10 +34,11 @@
                     return;
                 }
 
-                const apiKey = "0UCS0BOBZ6SXGARL"; // Remplace par ta vraie clé
+                const apiKeyGarage = "SPJ6Y2W1B009JQTG"; // Remplace par ta vraie clé
+                const apiKeyCave = "0UCS0BOBZ6SXGARL"; // Remplace par ta vraie clé
 
-                const garageUrl = `https://api.thingspeak.com/channels/2851323/fields/1.json?api_key=${apiKey}&start=${formatDate(startDate)}&end=${formatDate(endDate)}`;
-                const caveUrl = `https://api.thingspeak.com/channels/2865124/fields/1.json?api_key=${apiKey}&start=${formatDate(startDate)}&end=${formatDate(endDate)}`;
+                const garageUrl = `https://api.thingspeak.com/channels/2851323/fields/1.json?api_key=${apiKeyGarage}&start=${formatDate(startDate)}&end=${formatDate(endDate)}`;
+                const caveUrl = `https://api.thingspeak.com/channels/2865124/fields/1.json?api_key=${apiKeyCave}&start=${formatDate(startDate)}&end=${formatDate(endDate)}`;
 
                 console.log("Garage URL:", garageUrl);
                 console.log("Cave URL:", caveUrl);
