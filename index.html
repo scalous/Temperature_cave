@@ -7,6 +7,22 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+        }
+        #chartContainer {
+            width: 100%;
+            height: 80%; /* Ajuste la hauteur pour laisser de la place aux boutons */
+        }
+        #tempChart {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
 </head>
 <body>
     <h2>Évolution de la Température</h2>
@@ -15,10 +31,22 @@
     <label for="end-date">Date de fin :</label>
     <input type="date" id="end-date">
     <button onclick="fetchData()">Afficher</button>
-    <canvas id="tempChart"></canvas>
+
+    <div>
+        <button onclick="changeXScale('hour')">Échelle X (Heure)</button>
+        <button onclick="changeXScale('day')">Échelle X (Jour)</button>
+        <button onclick="changeYScale(10)">Échelle Y (+10)</button>
+        <button onclick="changeYScale(-10)">Échelle Y (-10)</button>
+    </div>
+
+    <div id="chartContainer">
+        <canvas id="tempChart"></canvas>
+    </div>
 
     <script>
-        let tempChart = null; // Initialise tempChart à null
+        let tempChart = null;
+        let yScaleMin = null;
+        let yScaleMax = null;
 
         function formatDate(dateStr) {
             const date = new Date(dateStr);
@@ -43,8 +71,8 @@
                 console.log("Formatted Start Date:", formattedStartDate);
                 console.log("Formatted End Date:", formattedEndDate);
 
-                const garageUrl = `https://api.thingspeak.com/channels/2851323/fields/1.json?api_key=${apiKeyGarage}&start=${formattedStartDate}&end=${formattedEndDate}`;
-                const caveUrl = `https://api.thingspeak.com/channels/2865124/fields/1.json?api_key=${apiKeyCave}&start=${formattedStartDate}&end=${formattedEndDate}`;
+                const garageUrl = `https://api.thingspeak.com/channels/2851323/fields/1.json?api_key=<span class="math-inline">\{apiKeyGarage\}&start\=</span>{formattedStartDate}&end=${formattedEndDate}`;
+                const caveUrl = `https://api.thingspeak.com/channels/2865124/fields/1.json?api_key=<span class="math-inline">\{apiKeyCave\}&start\=</span>{formattedStartDate}&end=${formattedEndDate}`;
 
                 console.log("Garage URL:", garageUrl);
                 console.log("Cave URL:", caveUrl);
@@ -55,11 +83,11 @@
                 ]);
 
                 if (!garageResponse.ok) {
-                    const errorData = await garageResponse.text(); // Récupère le corps de la réponse d'erreur
+                    const errorData = await garageResponse.text();
                     throw new Error(`Garage API Error: ${garageResponse.statusText}, Response: ${errorData}`);
                 }
                 if (!caveResponse.ok) {
-                    const errorData = await caveResponse.text(); // Récupère le corps de la réponse d'erreur
+                    const errorData = await caveResponse.text();
                     throw new Error(`Cave API Error: ${caveResponse.statusText}, Response: ${errorData}`);
                 }
 
@@ -103,11 +131,13 @@
                 tempChart.destroy();
             }
 
-            // Calcul des plages de températures
             const allData = garageData.concat(caveData);
             const temperatures = allData.map(data => data.y);
             const minTemp = Math.min(...temperatures);
             const maxTemp = Math.max(...temperatures);
+
+            if (yScaleMin === null) yScaleMin = minTemp - 2;
+            if (yScaleMax === null) yScaleMax = maxTemp + 2;
 
             tempChart = new Chart(ctx, {
                 type: 'line',
@@ -167,8 +197,8 @@
                             }
                         },
                         y: {
-                            min: minTemp - 2, // Ajoute un peu de marge
-                            max: maxTemp + 2,
+                            min: yScaleMin,
+                            max: yScaleMax,
                             title: {
                                 display: true,
                                 text: 'Température (°C)'
@@ -195,6 +225,8 @@
                 }
             });
         }
-    </script>
-</body>
-</html>
+
+        function changeXScale(unit) {
+            if (tempChart) {
+                tempChart.options.scales.x.time.unit = unit;
+                tempChart.update();
