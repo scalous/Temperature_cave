@@ -13,19 +13,15 @@
             padding: 0;
             height: 100%;
             width: 100%;
-            font-family: Arial, sans-serif;
         }
         #chartContainer {
             width: 100%;
-            height: 80vh;
+            height: 80%;
             position: relative;
         }
         #tempChart {
             width: 100%;
             height: 100%;
-        }
-        #scaleControls {
-            margin-top: 10px;
         }
     </style>
 </head>
@@ -35,14 +31,16 @@
     <input type="date" id="start-date">
     <label for="end-date">Date de fin :</label>
     <input type="date" id="end-date">
-    <button onclick="fetchData()">Afficher</button>
-    <button onclick="autoScaleY()">Auto-échelle Y</button>
+    <button id="fetchButton">Afficher</button>
+    <button id="autoScaleButton">Auto-échelle Y</button>
 
     <div id="chartContainer">
         <canvas id="tempChart"></canvas>
     </div>
 
     <script>
+        console.log("Script chargé");
+
         let tempChart = null;
         let yScaleMin = null;
         let yScaleMax = null;
@@ -53,6 +51,7 @@
         }
 
         async function fetchData() {
+            console.log("fetchData() appelé");
             try {
                 const startDate = document.getElementById('start-date').value;
                 const endDate = document.getElementById('end-date').value;
@@ -71,26 +70,20 @@
                 const garageUrl = `https://api.thingspeak.com/channels/2851323/fields/1.json?api_key=${apiKeyGarage}&start=${formattedStartDate}&end=${formattedEndDate}`;
                 const caveUrl = `https://api.thingspeak.com/channels/2865124/fields/1.json?api_key=${apiKeyCave}&start=${formattedStartDate}&end=${formattedEndDate}`;
 
-                console.log("Garage URL:", garageUrl);
-                console.log("Cave URL:", caveUrl);
-
                 const [garageResponse, caveResponse] = await Promise.all([
                     fetch(garageUrl),
                     fetch(caveUrl)
                 ]);
 
-                if (!garageResponse.ok) {
-                    throw new Error(`Garage API Error: ${garageResponse.statusText}`);
-                }
-                if (!caveResponse.ok) {
-                    throw new Error(`Cave API Error: ${caveResponse.statusText}`);
+                if (!garageResponse.ok || !caveResponse.ok) {
+                    throw new Error("Erreur lors de la récupération des données.");
                 }
 
                 const garageData = await garageResponse.json();
                 const caveData = await caveResponse.json();
 
                 if (!garageData.feeds || !caveData.feeds) {
-                    throw new Error("Les données sont absentes ou mal formatées.");
+                    throw new Error("Données absentes ou mal formatées.");
                 }
 
                 const formattedGarageData = formatData(garageData.feeds);
@@ -110,37 +103,25 @@
         }
 
         function movingAverage(data, windowSize) {
-            return data.map((_, i, arr) => {
-                const start = Math.max(0, i - windowSize + 1);
-                const subset = arr.slice(start, i + 1);
-                const avg = subset.reduce((sum, point) => sum + point.y, 0) / subset.length;
-                return { x: arr[i].x, y: avg };
+            return data.map((point, i) => {
+                let start = Math.max(0, i - windowSize + 1);
+                let subset = data.slice(start, i + 1);
+                let avg = subset.reduce((sum, p) => sum + p.y, 0) / subset.length;
+                return { x: point.x, y: avg };
             });
-        }
-
-        function autoScaleY() {
-            if (!tempChart) return;
-            const allData = tempChart.data.datasets.flatMap(ds => ds.data);
-            const temperatures = allData.map(d => d.y);
-            if (temperatures.length > 0) {
-                yScaleMin = Math.min(...temperatures) - 2;
-                yScaleMax = Math.max(...temperatures) + 2;
-                tempChart.options.scales.y.min = yScaleMin;
-                tempChart.options.scales.y.max = yScaleMax;
-                tempChart.update();
-            }
         }
 
         function plotChart(garageData, caveData) {
             const ctx = document.getElementById('tempChart').getContext('2d');
-            if (tempChart) {
-                tempChart.destroy();
-            }
+            if (tempChart) tempChart.destroy();
 
             const allData = garageData.concat(caveData);
             const temperatures = allData.map(data => data.y);
-            yScaleMin = Math.min(...temperatures) - 2;
-            yScaleMax = Math.max(...temperatures) + 2;
+            const minTemp = Math.min(...temperatures);
+            const maxTemp = Math.max(...temperatures);
+
+            if (yScaleMin === null) yScaleMin = minTemp - 2;
+            if (yScaleMax === null) yScaleMax = maxTemp + 2;
 
             tempChart = new Chart(ctx, {
                 type: 'line',
@@ -152,8 +133,7 @@
                             borderColor: 'red',
                             backgroundColor: 'rgba(255, 0, 0, 0.1)',
                             borderWidth: 1,
-                            pointRadius: 2,
-                            fill: false
+                            pointRadius: 2
                         },
                         {
                             label: 'Cave',
@@ -161,24 +141,21 @@
                             borderColor: 'blue',
                             backgroundColor: 'rgba(0, 0, 255, 0.1)',
                             borderWidth: 1,
-                            pointRadius: 2,
-                            fill: false
+                            pointRadius: 2
                         },
                         {
                             label: 'Garage (Moyenne mobile)',
                             data: movingAverage(garageData, 5),
                             borderColor: 'darkred',
                             borderWidth: 2,
-                            borderDash: [5, 5],
-                            fill: false
+                            borderDash: [5, 5]
                         },
                         {
                             label: 'Cave (Moyenne mobile)',
                             data: movingAverage(caveData, 5),
                             borderColor: 'darkblue',
                             borderWidth: 2,
-                            borderDash: [5, 5],
-                            fill: false
+                            borderDash: [5, 5]
                         }
                     ]
                 },
@@ -214,6 +191,16 @@
                 }
             });
         }
+
+        function autoScaleY() {
+            yScaleMin = null;
+            yScaleMax = null;
+            fetchData();
+        }
+
+        document.getElementById('fetchButton').addEventListener('click', fetchData);
+        document.getElementById('autoScaleButton').addEventListener('click', autoScaleY);
+
     </script>
 </body>
 </html>
