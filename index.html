@@ -18,7 +18,7 @@
     <canvas id="tempChart"></canvas>
 
     <script>
-        let tempChart;
+        let tempChart = null; // Initialise tempChart à null
 
         function formatDate(dateStr) {
             const date = new Date(dateStr);
@@ -99,7 +99,9 @@
 
         function plotChart(garageData, caveData) {
             const ctx = document.getElementById('tempChart').getContext('2d');
-            if (tempChart) tempChart.destroy();
+            if (tempChart) { // Vérifie si tempChart est initialisé
+                tempChart.destroy();
+            }
 
             tempChart = new Chart(ctx, {
                 type: 'line',
