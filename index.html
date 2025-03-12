@@ -101,8 +101,8 @@
                 const garageData = await garageResponse.json();
                 const caveData = await caveResponse.json();
 
-                console.log("Garage Data:", garageData); // Ajout pour le débogage
-                console.log("Cave Data:", caveData); // Ajout pour le débogage
+                console.log("Garage Data:", garageData);
+                console.log("Cave Data:", caveData);
 
                 if (!garageData.feeds || !caveData.feeds) {
                     throw new Error("Les données sont absentes ou mal formatées.");
@@ -118,10 +118,16 @@
         }
 
         function formatData(feeds) {
-            return feeds.map(feed => ({
+            console.log("Feeds before formatData:", feeds); // Ajout pour le débogage
+
+            const formattedData = feeds.map(feed => ({
                 x: new Date(feed.created_at),
                 y: parseFloat(feed.field1)
             })).filter(data => !isNaN(data.y));
+
+            console.log("Formatted Data after formatData:", formattedData); // Ajout pour le débogage
+
+            return formattedData;
         }
 
         function movingAverage(data, windowSize) {
@@ -149,8 +155,8 @@
             if (yScaleMin === null) yScaleMin = minTemp - 2;
             if (yScaleMax === null) yScaleMax = maxTemp + 2;
 
-            console.log("Garage Data for Chart:", garageData); // Ajout pour le débogage
-            console.log("Cave Data for Chart:", caveData); // Ajout pour le débogage
+            console.log("Garage Data for Chart:", garageData);
+            console.log("Cave Data for Chart:", caveData);
 
             tempChart = new Chart(ctx, {
                 type: 'line',
@@ -213,5 +219,3 @@
                             min: yScaleMin,
                             max: yScaleMax,
                             title: {
-                                display: true,
-                                text: 'Température (°C)'
