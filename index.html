@@ -7,6 +7,29 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+        }
+        #chartContainer {
+            width: 100%;
+            height: 80%;
+            position: relative;
+        }
+        #tempChart {
+            width: 100%;
+            height: 100%;
+        }
+        #scaleControls {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+    </style>
 </head>
 <body>
     <h2>Évolution de la Température</h2>
@@ -15,10 +38,22 @@
     <label for="end-date">Date de fin :</label>
     <input type="date" id="end-date">
     <button onclick="fetchData()">Afficher</button>
-    <canvas id="tempChart"></canvas>
+
+    <div id="chartContainer">
+        <div id="scaleControls">
+            <button onclick="changeXScale('hour')">Échelle X (Heure)</button>
+            <button onclick="changeXScale('day')">Échelle X (Jour)</button>
+            <button onclick="changeYScale(10)">Échelle Y (+10)</button>
+            <button onclick="changeYScale(-10)">Échelle Y (-10)</button>
+            <button onclick="autoScaleY()">Auto-échelle Y</button>
+        </div>
+        <canvas id="tempChart"></canvas>
+    </div>
 
     <script>
-        let tempChart = null; // Initialise tempChart à null
+        let tempChart = null;
+        let yScaleMin = null;
+        let yScaleMax = null;
 
         function formatDate(dateStr) {
             const date = new Date(dateStr);
@@ -35,16 +70,16 @@
                     return;
                 }
 
-                const apiKeyGarage = "SPJ6Y2W1B009JQTG"; // Remplace par ta vraie clé
-                const apiKeyCave = "0UCS0BOBZ6SXGARL"; // Remplace par ta vraie clé
+                const apiKeyGarage = "SPJ6Y2W1B009JQTG";
+                const apiKeyCave = "0UCS0BOBZ6SXGARL";
 
                 const formattedStartDate = formatDate(startDate);
                 const formattedEndDate = formatDate(endDate);
                 console.log("Formatted Start Date:", formattedStartDate);
                 console.log("Formatted End Date:", formattedEndDate);
 
-                const garageUrl = `https://api.thingspeak.com/channels/2851323/fields/1.json?api_key=${apiKeyGarage}&start=${formattedStartDate}&end=${formattedEndDate}`;
-                const caveUrl = `https://api.thingspeak.com/channels/2865124/fields/1.json?api_key=${apiKeyCave}&start=${formattedStartDate}&end=${formattedEndDate}`;
+                const garageUrl = `https://api.thingspeak.com/channels/2851323/fields/1.json?api_key=<span class="math-inline">\{apiKeyGarage\}&start\=</span>{formattedStartDate}&end=${formattedEndDate}`;
+                const caveUrl = `https://api.thingspeak.com/channels/2865124/fields/1.json?api_key=<span class="math-inline">\{apiKeyCave\}&start\=</span>{formattedStartDate}&end=${formattedEndDate}`;
 
                 console.log("Garage URL:", garageUrl);
                 console.log("Cave URL:", caveUrl);
@@ -55,16 +90,19 @@
                 ]);
 
                 if (!garageResponse.ok) {
-                    const errorData = await garageResponse.text(); // Récupère le corps de la réponse d'erreur
+                    const errorData = await garageResponse.text();
                     throw new Error(`Garage API Error: ${garageResponse.statusText}, Response: ${errorData}`);
                 }
                 if (!caveResponse.ok) {
-                    const errorData = await caveResponse.text(); // Récupère le corps de la réponse d'erreur
+                    const errorData = await caveResponse.text();
                     throw new Error(`Cave API Error: ${caveResponse.statusText}, Response: ${errorData}`);
                 }
 
                 const garageData = await garageResponse.json();
                 const caveData = await caveResponse.json();
+
+                console.log("Garage Data:", garageData); // Ajout pour le débogage
+                console.log("Cave Data:", caveData); // Ajout pour le débogage
 
                 if (!garageData.feeds || !caveData.feeds) {
                     throw new Error("Les données sont absentes ou mal formatées.");
@@ -103,11 +141,16 @@
                 tempChart.destroy();
             }
 
-            // Calcul des plages de températures
             const allData = garageData.concat(caveData);
             const temperatures = allData.map(data => data.y);
             const minTemp = Math.min(...temperatures);
             const maxTemp = Math.max(...temperatures);
+
+            if (yScaleMin === null) yScaleMin = minTemp - 2;
+            if (yScaleMax === null) yScaleMax = maxTemp + 2;
+
+            console.log("Garage Data for Chart:", garageData); // Ajout pour le débogage
+            console.log("Cave Data for Chart:", caveData); // Ajout pour le débogage
 
             tempChart = new Chart(ctx, {
                 type: 'line',
@@ -167,34 +210,8 @@
                             }
                         },
                         y: {
-                            min: minTemp - 2, // Ajoute un peu de marge
-                            max: maxTemp + 2,
+                            min: yScaleMin,
+                            max: yScaleMax,
                             title: {
                                 display: true,
                                 text: 'Température (°C)'
-                            }
-                        }
-                    },
-                    plugins: {
-                        zoom: {
-                            pan: {
-                                enabled: true,
-                                mode: 'x'
-                            },
-                            zoom: {
-                                wheel: {
-                                    enabled: true
-                                },
-                                pinch: {
-                                    enabled: true
-                                },
-                                mode: 'x'
-                            }
-                        }
-                    }
-                }
-            });
-        }
-    </script>
-</body>
-</html>
