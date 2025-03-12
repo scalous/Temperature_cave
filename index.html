@@ -163,3 +163,72 @@
                         {
                             label: 'Cave',
                             data: caveData,
+                            borderColor: 'blue',
+                            backgroundColor: 'rgba(0, 0, 255, 0.1)',
+                            borderWidth: 1,
+                            pointRadius: 2,
+                            pointHoverRadius: 4,
+                            fill: false
+                        },
+                        {
+                            label: 'Garage (Moyenne mobile)',
+                            data: movingAverage(garageData, 5),
+                            borderColor: 'darkred',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            fill: false
+                        },
+                        {
+                            label: 'Cave (Moyenne mobile)',
+                            data: movingAverage(caveData, 5),
+                            borderColor: 'darkblue',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'hour',
+                                tooltipFormat: 'YYYY-MM-DD HH:mm'
+                            },
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 45
+                            }
+                        },
+                        y: {
+                            min: yScaleMin,
+                            max: yScaleMax,
+                            title: {
+                                display: true,
+                                text: 'Température (°C)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        zoom: {
+                            pan: {
+                                enabled: true,
+                                mode: 'x'
+                            },
+                            zoom: {
+                                wheel: {
+                                    enabled: true
+                                },
+                                pinch: {
+                                    enabled: true
+                                },
+                                mode: 'x'
+                            }
+                        }
+                    }
+                }
+            });
+        }
