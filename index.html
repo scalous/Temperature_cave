@@ -37,8 +37,13 @@
                 const apiKeyGarage = "SPJ6Y2W1B009JQTG"; // Remplace par ta vraie clé
                 const apiKeyCave = "0UCS0BOBZ6SXGARL"; // Remplace par ta vraie clé
 
-                const garageUrl = `https://api.thingspeak.com/channels/2851323/fields/1.json?api_key=${apiKeyGarage}&start=${formatDate(startDate)}&end=${formatDate(endDate)}`;
-                const caveUrl = `https://api.thingspeak.com/channels/2865124/fields/1.json?api_key=${apiKeyCave}&start=${formatDate(startDate)}&end=${formatDate(endDate)}`;
+                const formattedStartDate = formatDate(startDate);
+                const formattedEndDate = formatDate(endDate);
+                console.log("Formatted Start Date:", formattedStartDate);
+                console.log("Formatted End Date:", formattedEndDate);
+
+                const garageUrl = `https://api.thingspeak.com/channels/2851323/fields/1.json?api_key=${apiKeyGarage}&start=${formattedStartDate}&end=${formattedEndDate}`;
+                const caveUrl = `https://api.thingspeak.com/channels/2865124/fields/1.json?api_key=${apiKeyCave}&start=${formattedStartDate}&end=${formattedEndDate}`;
 
                 console.log("Garage URL:", garageUrl);
                 console.log("Cave URL:", caveUrl);
@@ -49,10 +54,12 @@
                 ]);
 
                 if (!garageResponse.ok) {
-                    throw new Error(`Garage API Error: ${garageResponse.statusText}`);
+                    const errorData = await garageResponse.text(); // Récupère le corps de la réponse d'erreur
+                    throw new Error(`Garage API Error: ${garageResponse.statusText}, Response: ${errorData}`);
                 }
                 if (!caveResponse.ok) {
-                    throw new Error(`Cave API Error: ${caveResponse.statusText}`);
+                    const errorData = await caveResponse.text(); // Récupère le corps de la réponse d'erreur
+                    throw new Error(`Cave API Error: ${caveResponse.statusText}, Response: ${errorData}`);
                 }
 
                 const garageData = await garageResponse.json();
