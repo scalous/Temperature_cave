@@ -69,27 +69,31 @@
 
                 const garageUrl = `https://api.thingspeak.com/channels/2851323/fields/1.json?api_key=${apiKeyGarage}&start=${formattedStartDate}&end=${formattedEndDate}`;
                 const caveUrl = `https://api.thingspeak.com/channels/2865124/fields/1.json?api_key=${apiKeyCave}&start=${formattedStartDate}&end=${formattedEndDate}`;
+                const exterieurUrl = "https://api.thingspeak.com/channels/2875447/fields/1.json?api_key=2UWYLM7YZ3VLYW8J&results=100";
 
-                const [garageResponse, caveResponse] = await Promise.all([
+                const [garageResponse, caveResponse, exterieurResponse] = await Promise.all([
                     fetch(garageUrl),
-                    fetch(caveUrl)
+                    fetch(caveUrl),
+                    fetch(exterieurUrl)
                 ]);
 
-                if (!garageResponse.ok || !caveResponse.ok) {
+                if (!garageResponse.ok || !caveResponse.ok || !exterieurResponse.ok) {
                     throw new Error("Erreur lors de la récupération des données.");
                 }
 
                 const garageData = await garageResponse.json();
                 const caveData = await caveResponse.json();
+                const exterieurData = await exterieurResponse.json();
 
-                if (!garageData.feeds || !caveData.feeds) {
+                if (!garageData.feeds || !caveData.feeds || !exterieurData.feeds) {
                     throw new Error("Données absentes ou mal formatées.");
                 }
 
                 const formattedGarageData = formatData(garageData.feeds);
                 const formattedCaveData = formatData(caveData.feeds);
+                const formattedExterieurData = formatData(exterieurData.feeds);
 
-                plotChart(formattedGarageData, formattedCaveData);
+                plotChart(formattedGarageData, formattedCaveData, formattedExterieurData);
             } catch (error) {
                 console.error("Erreur API:", error);
             }
@@ -111,11 +115,11 @@
             });
         }
 
-        function plotChart(garageData, caveData) {
+        function plotChart(garageData, caveData, exterieurData) {
             const ctx = document.getElementById('tempChart').getContext('2d');
             if (tempChart) tempChart.destroy();
 
-            const allData = garageData.concat(caveData);
+            const allData = garageData.concat(caveData, exterieurData);
             const temperatures = allData.map(data => data.y);
             const minTemp = Math.min(...temperatures);
             const maxTemp = Math.max(...temperatures);
@@ -144,6 +148,14 @@
                             pointRadius: 2
                         },
                         {
+                            label: 'Extérieur',
+                            data: exterieurData,
+                            borderColor: 'green',
+                            backgroundColor: 'rgba(0, 255, 0, 0.1)',
+                            borderWidth: 1,
+                            pointRadius: 2
+                        },
+                        {
                             label: 'Garage (Moyenne mobile)',
                             data: movingAverage(garageData, 5),
                             borderColor: 'darkred',
@@ -154,6 +166,13 @@
                             label: 'Cave (Moyenne mobile)',
                             data: movingAverage(caveData, 5),
                             borderColor: 'darkblue',
+                            borderWidth: 2,
+                            borderDash: [5, 5]
+                        },
+                        {
+                            label: 'Extérieur (Moyenne mobile)',
+                            data: movingAverage(exterieurData, 5),
+                            borderColor: 'darkgreen',
                             borderWidth: 2,
                             borderDash: [5, 5]
                         }
@@ -200,7 +219,6 @@
 
         document.getElementById('fetchButton').addEventListener('click', fetchData);
         document.getElementById('autoScaleButton').addEventListener('click', autoScaleY);
-
     </script>
 </body>
 </html>
