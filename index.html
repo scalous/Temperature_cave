@@ -3,222 +3,116 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Évolution de la Température</title>
+    <title>Comparatif Température et Pression</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
     <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            width: 100%;
-        }
-        #chartContainer {
-            width: 100%;
-            height: 80%;
-            position: relative;
-        }
-        #tempChart {
-            width: 100%;
-            height: 100%;
-        }
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; }
+        #chartContainer { width: 100%; height: 80%; position: relative; }
+        #chartCanvas { width: 100%; height: 100%; }
+        #loading { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); }
     </style>
 </head>
 <body>
-    <h2>Évolution de la Température</h2>
+    <h2>Comparatif Température et Pression</h2>
     <label for="start-date">Date de début :</label>
     <input type="date" id="start-date">
     <label for="end-date">Date de fin :</label>
     <input type="date" id="end-date">
     <button id="fetchButton">Afficher</button>
     <button id="autoScaleButton">Auto-échelle Y</button>
-
-    <div id="chartContainer">
-        <canvas id="tempChart"></canvas>
-    </div>
+    <button id="last24hButton">Dernières 24h</button>
+    <div id="loading">Chargement...</div>
+    <div id="chartContainer"><canvas id="chartCanvas"></canvas></div>
 
     <script>
-        console.log("Script chargé");
+        let chart = null;
+        let yScaleMin = null, yScaleMax = null;
 
-        let tempChart = null;
-        let yScaleMin = null;
-        let yScaleMax = null;
+        function showLoading() { document.getElementById('loading').style.display = 'block'; }
+        function hideLoading() { document.getElementById('loading').style.display = 'none'; }
 
-        function formatDate(dateStr) {
-            const date = new Date(dateStr);
+        function formatDate(date) {
             return date.toISOString().slice(0, 19).replace("T", " ") + " UTC";
         }
 
-        async function fetchData() {
-            console.log("fetchData() appelé");
+        async function fetchData(startDate, endDate) {
+            if (!startDate || !endDate) return console.error("Sélectionnez des dates valides.");
+
+            showLoading();
+
+            const apiKeys = {
+                garage: { temp: "SPJ6Y2W1B009JQTG", press: "SPJ6Y2W1B009JQTG" },
+                cave: { temp: "0UCS0BOBZ6SXGARL", press: "0UCS0BOBZ6SXGARL" },
+                exterieur: { temp: "2UWYLM7YZ3VLYW8J", press: "2UWYLM7YZ3VLYW8J" }
+            };
+
+            const urls = {
+                garageTemp: `https://api.thingspeak.com/channels/2851323/fields/1.json?api_key=${apiKeys.garage.temp}&start=${formatDate(startDate)}&end=${formatDate(endDate)}`,
+                garagePress: `https://api.thingspeak.com/channels/2851323/fields/2.json?api_key=${apiKeys.garage.press}&start=${formatDate(startDate)}&end=${formatDate(endDate)}`,
+                caveTemp: `https://api.thingspeak.com/channels/2865124/fields/1.json?api_key=${apiKeys.cave.temp}&start=${formatDate(startDate)}&end=${formatDate(endDate)}`,
+                cavePress: `https://api.thingspeak.com/channels/2865124/fields/2.json?api_key=${apiKeys.cave.press}&start=${formatDate(startDate)}&end=${formatDate(endDate)}`,
+                exterieurTemp: `https://api.thingspeak.com/channels/2875447/fields/1.json?api_key=${apiKeys.exterieur.temp}&start=${formatDate(startDate)}&end=${formatDate(endDate)}`,
+                exterieurPress: `https://api.thingspeak.com/channels/2875447/fields/2.json?api_key=${apiKeys.exterieur.press}&start=${formatDate(startDate)}&end=${formatDate(endDate)}`
+            };
+
             try {
-                const startDate = document.getElementById('start-date').value;
-                const endDate = document.getElementById('end-date').value;
+                const responses = await Promise.all(Object.values(urls).map(url => fetch(url)));
+                if (responses.some(response => !response.ok)) throw new Error("Erreur lors de la récupération des données.");
 
-                if (!startDate || !endDate) {
-                    console.error("Veuillez sélectionner des dates valides.");
-                    return;
-                }
-
-                const apiKeyGarage = "SPJ6Y2W1B009JQTG";
-                const apiKeyCave = "0UCS0BOBZ6SXGARL";
-
-                const formattedStartDate = formatDate(startDate);
-                const formattedEndDate = formatDate(endDate);
-
-                const garageUrl = `https://api.thingspeak.com/channels/2851323/fields/1.json?api_key=${apiKeyGarage}&start=${formattedStartDate}&end=${formattedEndDate}`;
-                const caveUrl = `https://api.thingspeak.com/channels/2865124/fields/1.json?api_key=${apiKeyCave}&start=${formattedStartDate}&end=${formattedEndDate}`;
-                const exterieurUrl = "https://api.thingspeak.com/channels/2875447/fields/1.json?api_key=2UWYLM7YZ3VLYW8J&results=100";
-
-                const [garageResponse, caveResponse, exterieurResponse] = await Promise.all([
-                    fetch(garageUrl),
-                    fetch(caveUrl),
-                    fetch(exterieurUrl)
-                ]);
-
-                if (!garageResponse.ok || !caveResponse.ok || !exterieurResponse.ok) {
-                    throw new Error("Erreur lors de la récupération des données.");
-                }
-
-                const garageData = await garageResponse.json();
-                const caveData = await caveResponse.json();
-                const exterieurData = await exterieurResponse.json();
-
-                if (!garageData.feeds || !caveData.feeds || !exterieurData.feeds) {
-                    throw new Error("Données absentes ou mal formatées.");
-                }
-
-                const formattedGarageData = formatData(garageData.feeds);
-                const formattedCaveData = formatData(caveData.feeds);
-                const formattedExterieurData = formatData(exterieurData.feeds);
-
-                plotChart(formattedGarageData, formattedCaveData, formattedExterieurData);
+                const data = await Promise.all(responses.map(res => res.json()));
+                const formattedData = data.map((d, i) => formatData(d.feeds));
+                plotChart(...formattedData);
             } catch (error) {
-                console.error("Erreur API:", error);
+                console.error(error);
+                alert("Une erreur est survenue lors de la récupération des données.");
+            } finally {
+                hideLoading();
             }
         }
 
         function formatData(feeds) {
-            return feeds.map(feed => ({
-                x: new Date(feed.created_at),
-                y: parseFloat(feed.field1)
-            })).filter(data => !isNaN(data.y));
+            return feeds.map(feed => ({ x: new Date(feed.created_at), y: parseFloat(feed.field1) }))
+                        .filter(d => !isNaN(d.y));
         }
 
-        function movingAverage(data, windowSize) {
-            return data.map((point, i) => {
-                let start = Math.max(0, i - windowSize + 1);
-                let subset = data.slice(start, i + 1);
-                let avg = subset.reduce((sum, p) => sum + p.y, 0) / subset.length;
-                return { x: point.x, y: avg };
-            });
-        }
+        function plotChart(gTemp, gPress, cTemp, cPress, eTemp, ePress) {
+            const ctx = document.getElementById('chartCanvas').getContext('2d');
+            if (chart) chart.destroy();
 
-        function plotChart(garageData, caveData, exterieurData) {
-            const ctx = document.getElementById('tempChart').getContext('2d');
-            if (tempChart) tempChart.destroy();
-
-            const allData = garageData.concat(caveData, exterieurData);
-            const temperatures = allData.map(data => data.y);
-            const minTemp = Math.min(...temperatures);
-            const maxTemp = Math.max(...temperatures);
-
-            if (yScaleMin === null) yScaleMin = minTemp - 2;
-            if (yScaleMax === null) yScaleMax = maxTemp + 2;
-
-            tempChart = new Chart(ctx, {
+            chart = new Chart(ctx, {
                 type: 'line',
-                data: {
-                    datasets: [
-                        {
-                            label: 'Garage',
-                            data: garageData,
-                            borderColor: 'red',
-                            backgroundColor: 'rgba(255, 0, 0, 0.1)',
-                            borderWidth: 1,
-                            pointRadius: 2
-                        },
-                        {
-                            label: 'Cave',
-                            data: caveData,
-                            borderColor: 'blue',
-                            backgroundColor: 'rgba(0, 0, 255, 0.1)',
-                            borderWidth: 1,
-                            pointRadius: 2
-                        },
-                        {
-                            label: 'Extérieur',
-                            data: exterieurData,
-                            borderColor: 'green',
-                            backgroundColor: 'rgba(0, 255, 0, 0.1)',
-                            borderWidth: 1,
-                            pointRadius: 2
-                        },
-                        {
-                            label: 'Garage (Moyenne mobile)',
-                            data: movingAverage(garageData, 5),
-                            borderColor: 'darkred',
-                            borderWidth: 2,
-                            borderDash: [5, 5]
-                        },
-                        {
-                            label: 'Cave (Moyenne mobile)',
-                            data: movingAverage(caveData, 5),
-                            borderColor: 'darkblue',
-                            borderWidth: 2,
-                            borderDash: [5, 5]
-                        },
-                        {
-                            label: 'Extérieur (Moyenne mobile)',
-                            data: movingAverage(exterieurData, 5),
-                            borderColor: 'darkgreen',
-                            borderWidth: 2,
-                            borderDash: [5, 5]
-                        }
-                    ]
-                },
+                data: { datasets: [
+                    { label: 'Garage Temp', data: gTemp, borderColor: 'red', yAxisID: 'y' },
+                    { label: 'Garage Press', data: gPress, borderColor: 'darkred', yAxisID: 'y1' },
+                    { label: 'Cave Temp', data: cTemp, borderColor: 'blue', yAxisID: 'y' },
+                    { label: 'Cave Press', data: cPress, borderColor: 'darkblue', yAxisID: 'y1' },
+                    { label: 'Extérieur Temp', data: eTemp, borderColor: 'green', yAxisID: 'y' },
+                    { label: 'Extérieur Press', data: ePress, borderColor: 'darkgreen', yAxisID: 'y1' }
+                ]},
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
-                        x: {
-                            type: 'time',
-                            time: {
-                                unit: 'hour',
-                                tooltipFormat: 'yyyy-MM-dd HH:mm',
-                                displayFormats: {
-                                    hour: 'dd MMM HH:mm'
-                                }
-                            }
-                        },
-                        y: {
-                            min: yScaleMin,
-                            max: yScaleMax,
-                            title: {
-                                display: true,
-                                text: 'Température (°C)'
-                            }
-                        }
+                        x: { type: 'time', time: { unit: 'hour' } },
+                        y: { title: { display: true, text: 'Température (°C)' } },
+                        y1: { title: { display: true, text: 'Pression (hPa)' }, position: 'right', grid: { drawOnChartArea: false } }
                     },
-                    plugins: {
-                        zoom: {
-                            pan: { enabled: true, mode: 'xy' },
-                            zoom: { enabled: true, mode: 'xy' }
-                        }
-                    }
+                    plugins: { zoom: { pan: { enabled: true }, zoom: { enabled: true } } }
                 }
             });
         }
 
-        function autoScaleY() {
-            yScaleMin = null;
-            yScaleMax = null;
-            fetchData();
-        }
-
-        document.getElementById('fetchButton').addEventListener('click', fetchData);
-        document.getElementById('autoScaleButton').addEventListener('click', autoScaleY);
+        document.getElementById('fetchButton').addEventListener('click', () => {
+            fetchData(new Date(document.getElementById('start-date').value), new Date(document.getElementById('end-date').value));
+        });
+        document.getElementById('autoScaleButton').addEventListener('click', () => { yScaleMin = yScaleMax = null; fetchData(); });
+        document.getElementById('last24hButton').addEventListener('click', () => {
+            const now = new Date();
+            const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+            fetchData(last24h, now);
+        });
     </script>
 </body>
 </html>
