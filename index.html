@@ -18,8 +18,12 @@
     <h2>Comparatif Température et Pression</h2>
     <label for="start-date">Date de début :</label>
     <input type="date" id="start-date">
+    <label for="start-time">Heure de début :</label>
+    <input type="time" id="start-time">
     <label for="end-date">Date de fin :</label>
     <input type="date" id="end-date">
+    <label for="end-time">Heure de fin :</label>
+    <input type="time" id="end-time">
     <button id="fetchButton">Afficher</button>
     <button id="autoScaleButton">Auto-échelle Y</button>
     <button id="last24hButton">Dernières 24h</button>
@@ -37,10 +41,14 @@
             return date.toISOString().slice(0, 19).replace("T", " ") + " UTC";
         }
 
-        async function fetchData(startDate, endDate) {
+        async function fetchData(startDate, endDate, startTime, endTime) {
             if (!startDate || !endDate) return console.error("Sélectionnez des dates valides.");
 
             showLoading();
+
+            // Combiner la date et l'heure
+            const startDateTime = startTime ? new Date(`${startDate}T${startTime}`) : new Date(startDate);
+            const endDateTime = endTime ? new Date(`${endDate}T${endTime}`) : new Date(endDate);
 
             const apiKeys = {
                 garage: { temp: "SPJ6Y2W1B009JQTG", press: "SPJ6Y2W1B009JQTG" },
@@ -49,12 +57,12 @@
             };
 
             const urls = {
-                garageTemp: `https://api.thingspeak.com/channels/2851323/fields/1.json?api_key=${apiKeys.garage.temp}&start=${formatDate(startDate)}&end=${formatDate(endDate)}`,
-                garagePress: `https://api.thingspeak.com/channels/2851323/fields/2.json?api_key=${apiKeys.garage.press}&start=${formatDate(startDate)}&end=${formatDate(endDate)}`,
-                caveTemp: `https://api.thingspeak.com/channels/2865124/fields/1.json?api_key=${apiKeys.cave.temp}&start=${formatDate(startDate)}&end=${formatDate(endDate)}`,
-                cavePress: `https://api.thingspeak.com/channels/2865124/fields/2.json?api_key=${apiKeys.cave.press}&start=${formatDate(startDate)}&end=${formatDate(endDate)}`,
-                exterieurTemp: `https://api.thingspeak.com/channels/2875447/fields/1.json?api_key=${apiKeys.exterieur.temp}&start=${formatDate(startDate)}&end=${formatDate(endDate)}`,
-                exterieurPress: `https://api.thingspeak.com/channels/2875447/fields/2.json?api_key=${apiKeys.exterieur.press}&start=${formatDate(startDate)}&end=${formatDate(endDate)}`
+                garageTemp: `https://api.thingspeak.com/channels/2851323/fields/1.json?api_key=${apiKeys.garage.temp}&start=${formatDate(startDateTime)}&end=${formatDate(endDateTime)}`,
+                garagePress: `https://api.thingspeak.com/channels/2851323/fields/2.json?api_key=${apiKeys.garage.press}&start=${formatDate(startDateTime)}&end=${formatDate(endDateTime)}`,
+                caveTemp: `https://api.thingspeak.com/channels/2865124/fields/1.json?api_key=${apiKeys.cave.temp}&start=${formatDate(startDateTime)}&end=${formatDate(endDateTime)}`,
+                cavePress: `https://api.thingspeak.com/channels/2865124/fields/2.json?api_key=${apiKeys.cave.press}&start=${formatDate(startDateTime)}&end=${formatDate(endDateTime)}`,
+                exterieurTemp: `https://api.thingspeak.com/channels/2875447/fields/1.json?api_key=${apiKeys.exterieur.temp}&start=${formatDate(startDateTime)}&end=${formatDate(endDateTime)}`,
+                exterieurPress: `https://api.thingspeak.com/channels/2875447/fields/2.json?api_key=${apiKeys.exterieur.press}&start=${formatDate(startDateTime)}&end=${formatDate(endDateTime)}`
             };
 
             try {
@@ -105,7 +113,12 @@
         }
 
         document.getElementById('fetchButton').addEventListener('click', () => {
-            fetchData(new Date(document.getElementById('start-date').value), new Date(document.getElementById('end-date').value));
+            fetchData(
+                new Date(document.getElementById('start-date').value),
+                new Date(document.getElementById('end-date').value),
+                document.getElementById('start-time').value,
+                document.getElementById('end-time').value
+            );
         });
         document.getElementById('autoScaleButton').addEventListener('click', () => { yScaleMin = yScaleMax = null; fetchData(); });
         document.getElementById('last24hButton').addEventListener('click', () => {
